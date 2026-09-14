@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f1012" />
+    <meta name="description" content="Pharos keyboard test" />
+    <title>pharos-keyboard-test</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230f1012'/%3E%3Cpath d='M9 8v16M9 16h14M23 8v16' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f1012;
+        --panel: #17181b;
+        --panel-soft: #1c1e22;
+        --key: #25282d;
+        --key-top: #2b2e34;
+        --key-hover: #30343a;
+        --ink: #f5f5f7;
+        --text: #d8dbe1;
+        --muted: #8d929c;
+        --quiet: #5b606a;
+        --line: rgba(255, 255, 255, 0.09);
+        --accent: #4d97f7;
+        --accent-soft: rgba(77, 151, 247, 0.16);
+        --green: #55d68d;
+        --shadow: 0 25px 80px rgba(0, 0, 0, 0.29);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { min-height: 100%; }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 50% -12%, rgba(77, 151, 247, 0.1), transparent 38rem),
+          var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      button { font: inherit; }
+
+      .app-shell {
+        width: min(1480px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 27px 0 30px;
+      }
+
+      .topbar,
+      .card-head,
+      .bottom-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .topbar { min-height: 32px; margin-bottom: 32px; }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-mark {
+        width: 23px;
+        height: 23px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-soft);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .brand-name span { color: var(--muted); font-weight: 400; }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 4px var(--accent-soft);
+        transition: background 180ms ease, box-shadow 180ms ease;
+      }
+
+      .status.is-active .status-dot {
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(85, 214, 141, 0.13);
+      }
+
+      .status.is-paused .status-dot {
+        background: #f2b846;
+        box-shadow: 0 0 0 4px rgba(242, 184, 70, 0.13);
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 238px;
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .keyboard-card,
+      .stats-card {
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012)), var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .keyboard-card { min-width: 0; padding: 23px; }
+
+      .card-head {
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--ink);
+        font-size: clamp(25px, 3vw, 34px);
+        line-height: 1;
+        font-weight: 600;
+        letter-spacing: -0.055em;
+      }
+
+      .head-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .mode-switch {
+        display: inline-flex;
+        padding: 3px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: rgba(0,0,0,0.16);
+      }
+
+      .mode-button,
+      .reset-button {
+        border: 0;
+        color: var(--muted);
+        background: transparent;
+        cursor: pointer;
+        font-size: 12px;
+        transition: color 140ms ease, background 140ms ease;
+      }
+
+      .mode-button {
+        min-width: 70px;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 6px;
+      }
+
+      .mode-button:hover,
+      .mode-button.is-selected {
+        color: var(--ink);
+        background: var(--panel-soft);
+      }
+
+      .reset-button { padding: 7px 0; }
+      .reset-button:hover { color: var(--ink); }
+      .mode-button:focus-visible,
+      .reset-button:focus-visible,
+      .focus-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+      .card-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .card-meta strong { color: var(--text); font-weight: 500; }
+      .card-meta #testedLabel { color: var(--green); }
+      .meta-separator { color: var(--quiet); }
+
+      .keyboard-scroll { overflow-x: auto; padding: 1px 0 2px; }
+
+      .keyboard {
+        min-width: 1115px;
+        padding: 16px;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 17px;
+        background: #0c0d0f;
+      }
+
+      .function-row,
+      .deck-row {
+        display: flex;
+        gap: 6px;
+      }
+
+      .function-row { gap: 6px; margin-bottom: 12px; }
+      .key-spacer { flex: 0.42 1 0; min-width: 5px; }
+
+      .key-decks {
+        display: grid;
+        grid-template-columns: 7fr 1.55fr 1.95fr;
+        gap: 10px;
+      }
+
+      .main-deck { display: flex; flex-direction: column; gap: 6px; }
+
+      .numpad-deck {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-rows: repeat(5, 47px);
+        gap: 6px;
+      }
+
+      .nav-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-rows: repeat(5, 47px);
+        gap: 6px;
+      }
+
+      .nav-blank { visibility: hidden; }
+
+      .key {
+        --unit: 1;
+        position: relative;
+        display: flex;
+        flex: var(--unit) 1 0;
+        min-width: 0;
+        height: 47px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 6px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.075);
+        border-radius: 8px;
+        background: linear-gradient(180deg, var(--key-top), var(--key));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.035), 0 2px 0 rgba(0,0,0,0.32);
+        color: var(--text);
+        cursor: default;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+        text-align: center;
+        transition: transform 80ms ease, background 80ms ease, border-color 80ms ease, box-shadow 80ms ease, color 80ms ease;
+      }
+
+      .key:hover { background: linear-gradient(180deg, var(--key-hover), #292c32); }
+
+      .key.small-label { color: var(--muted); font-size: 10px; }
+
+      .key.tested:not(.pressed) {
+        border-color: rgba(85,214,141,0.72);
+        background: linear-gradient(180deg, #31483b, #25332c);
+        box-shadow: inset 0 0 0 1px rgba(85,214,141,0.11), 0 0 0 1px rgba(85,214,141,0.08), 0 2px 0 rgba(0,0,0,0.32);
+        color: #effcf4;
+      }
+
+      .key.tested:not(.pressed)::after {
+        content: "";
+        position: absolute;
+        right: 7px;
+        bottom: 4px;
+        left: 7px;
+        height: 2px;
+        border-radius: 99px;
+        background: var(--green);
+        box-shadow: 0 0 8px rgba(85,214,141,0.65);
+      }
+
+      .key.verified {
+        animation: verifyPulse 520ms ease-out;
+      }
+
+      @keyframes verifyPulse {
+        0% { box-shadow: inset 0 0 0 1px rgba(85,214,141,0.11), 0 0 0 0 rgba(85,214,141,0.55), 0 2px 0 rgba(0,0,0,0.32); }
+        55% { box-shadow: inset 0 0 0 1px rgba(85,214,141,0.18), 0 0 0 4px rgba(85,214,141,0.13), 0 0 25px rgba(85,214,141,0.34); }
+        100% { box-shadow: inset 0 0 0 1px rgba(85,214,141,0.11), 0 0 0 1px rgba(85,214,141,0.08), 0 2px 0 rgba(0,0,0,0.32); }
+      }
+
+      .key.pressed {
+        transform: translateY(2px);
+        border-color: rgba(105, 175, 255, 0.82);
+        background: linear-gradient(180deg, #4b9bf3, #2869bb);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.21), 0 0 0 2px rgba(77,151,247,0.11), 0 0 20px rgba(48,131,242,0.25);
+        color: #fff;
+      }
+
+      .key.pressed.small-label { color: #f4f8ff; }
+
+      .key--backspace { --unit: 1.75; }
+      .key--tab { --unit: 1.5; }
+      .key--backslash { --unit: 1.42; }
+      .key--caps { --unit: 1.72; }
+      .key--enter { --unit: 1.93; }
+      .key--shift-left { --unit: 2.18; }
+      .key--shift-right { --unit: 2.5; }
+      .key--mod { --unit: 1.3; }
+      .key--space { --unit: 6.7; }
+
+      .key[data-code="AudioVolumeDown"],
+      .key[data-code="AudioVolumeUp"],
+      .key[data-code="AudioVolumeMute"],
+      .key[data-code="LaunchCalculator"] { font-size: 10px; }
+
+      .key[data-code="LaunchCalculator"] { --unit: 1.35; }
+
+      .nav-grid .key:nth-child(1) { grid-column: 1; grid-row: 1; }
+      .nav-grid .key:nth-child(2) { grid-column: 2; grid-row: 1; }
+      .nav-grid .key:nth-child(3) { grid-column: 3; grid-row: 1; }
+      .nav-grid .key:nth-child(4) { grid-column: 1; grid-row: 2; }
+      .nav-grid .key:nth-child(5) { grid-column: 2; grid-row: 2; }
+      .nav-grid .key:nth-child(6) { grid-column: 3; grid-row: 2; }
+      .nav-grid .key:nth-child(7) { grid-column: 2; grid-row: 4; }
+      .nav-grid .key:nth-child(8) { grid-column: 1; grid-row: 5; }
+      .nav-grid .key:nth-child(9) { grid-column: 2; grid-row: 5; }
+      .nav-grid .key:nth-child(10) { grid-column: 3; grid-row: 5; }
+
+      .numpad-deck .key:nth-child(1) { grid-column: 1; grid-row: 1; }
+      .numpad-deck .key:nth-child(2) { grid-column: 2; grid-row: 1; }
+      .numpad-deck .key:nth-child(3) { grid-column: 3; grid-row: 1; }
+      .numpad-deck .key:nth-child(4) { grid-column: 4; grid-row: 1; }
+      .numpad-deck .key:nth-child(5) { grid-column: 1; grid-row: 2; }
+      .numpad-deck .key:nth-child(6) { grid-column: 2; grid-row: 2; }
+      .numpad-deck .key:nth-child(7) { grid-column: 3; grid-row: 2; }
+      .numpad-deck .key:nth-child(8) { grid-column: 4; grid-row: 2 / span 2; height: auto; }
+      .numpad-deck .key:nth-child(9) { grid-column: 1; grid-row: 3; }
+      .numpad-deck .key:nth-child(10) { grid-column: 2; grid-row: 3; }
+      .numpad-deck .key:nth-child(11) { grid-column: 3; grid-row: 3; }
+      .numpad-deck .key:nth-child(12) { grid-column: 1; grid-row: 4; }
+      .numpad-deck .key:nth-child(13) { grid-column: 2; grid-row: 4; }
+      .numpad-deck .key:nth-child(14) { grid-column: 3; grid-row: 4; }
+      .numpad-deck .key:nth-child(15) { grid-column: 4; grid-row: 4 / span 2; height: auto; }
+      .numpad-deck .key:nth-child(16) { grid-column: 1 / span 2; grid-row: 5; }
+      .numpad-deck .key:nth-child(17) { grid-column: 3; grid-row: 5; }
+
+      .stats-card {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+        padding: 11px;
+      }
+
+      .stat {
+        min-height: 106px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 15px 15px 13px;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.024);
+      }
+
+      .stat + .stat { border-top: 1px solid var(--line); border-radius: 0; }
+      .stat-label { color: var(--muted); font-size: 12px; }
+      .stat-value { color: var(--ink); font-size: 35px; line-height: 1; font-weight: 500; letter-spacing: -0.07em; font-variant-numeric: tabular-nums; }
+      .stat-value small { margin-left: 4px; color: var(--muted); font-size: 11px; font-weight: 400; letter-spacing: 0; }
+      .stat-note { color: var(--quiet); font-size: 11px; }
+
+      .coverage {
+        min-height: 78px;
+        padding: 13px 15px 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .coverage-head { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; }
+      .coverage-head strong { color: var(--green); font-weight: 500; font-variant-numeric: tabular-nums; }
+      .coverage-track { height: 4px; margin-top: 12px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,0.08); }
+      .coverage-fill { width: 0; height: 100%; border-radius: inherit; background: var(--green); transition: width 160ms ease; }
+
+      .recent {
+        min-height: 128px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: auto;
+        padding: 16px 15px 12px;
+        border-top: 1px solid var(--line);
+      }
+
+      .recent-title { color: var(--muted); font-size: 12px; }
+      .recent-list { min-height: 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+      .recent-key { padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: rgba(255,255,255,0.035); font-size: 11px; }
+
+      .bottom-bar { margin-top: 17px; justify-content: flex-end; }
+
+      .focus-button {
+        min-width: 145px;
+        height: 42px;
+        padding: 0 17px;
+        border: 0;
+        border-radius: 11px;
+        background: var(--ink);
+        color: #111214;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        transition: transform 140ms ease, background 140ms ease;
+      }
+
+      .focus-button:hover { background: #fff; transform: translateY(-1px); }
+      .focus-button:active { transform: translateY(0); }
+      .focus-button.is-active { background: var(--accent); color: #fff; }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        max-width: calc(100% - 32px);
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(28,30,34,0.95);
+        box-shadow: 0 12px 36px rgba(0,0,0,0.28);
+        color: var(--text);
+        font-size: 12px;
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, 8px);
+        transition: opacity 180ms ease, transform 180ms ease;
+      }
+
+      .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+      @media (max-width: 1160px) {
+        .dashboard { grid-template-columns: 1fr; }
+        .stats-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+        .stat { min-height: 100px; }
+        .stat + .stat { border-top: 0; border-left: 1px solid var(--line); border-radius: 0; }
+        .coverage { border-top: 1px solid var(--line); }
+        .recent { min-height: 83px; border-top: 1px solid var(--line); }
+      }
+
+      @media (max-width: 660px) {
+        .app-shell { width: calc(100% - 24px); padding-top: 16px; }
+        .topbar { margin-bottom: 22px; }
+        .keyboard-card { padding: 16px; border-radius: 18px; }
+        .card-head { align-items: center; margin-bottom: 15px; }
+        .head-right { gap: 8px; }
+        .mode-button { min-width: 63px; padding: 0 8px; }
+        h1 { font-size: 25px; }
+        .card-meta { margin-top: 13px; }
+        .keyboard { min-width: 925px; padding: 11px; border-radius: 13px; }
+        .key-decks { gap: 7px; }
+        .function-row, .deck-row, .main-deck, .numpad-deck, .nav-grid { gap: 5px; }
+        .function-row { margin-bottom: 8px; }
+        .key { height: 39px; border-radius: 7px; font-size: 10px; }
+        .numpad-deck, .nav-grid { grid-template-rows: repeat(5, 39px); }
+        .stats-card { border-radius: 18px; }
+        .stat { min-height: 88px; padding: 12px; }
+        .stat-value { font-size: 29px; }
+        .coverage, .recent { padding-left: 12px; padding-right: 12px; }
+        .bottom-bar { margin-top: 12px; }
+        .focus-button { width: 100%; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand" aria-label="pharos keyboard test">
+          <span class="brand-mark" aria-hidden="true">⌘</span>
+          <span class="brand-name">pharos <span>/ keyboard test</span></span>
+        </div>
+        <div class="status" id="status" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="statusLabel">已就绪</span>
+        </div>
+      </header>
+
+      <section class="dashboard" aria-label="键盘测试">
+        <section class="keyboard-card" aria-labelledby="pageTitle">
+          <div class="card-head">
+            <h1 id="pageTitle">键盘测试</h1>
+            <div class="head-right">
+              <div class="mode-switch" role="radiogroup" aria-label="键盘布局">
+                <button class="mode-button is-selected" data-mode="win" role="radio" aria-checked="true" type="button">Win 108</button>
+                <button class="mode-button" data-mode="mac" role="radio" aria-checked="false" type="button">Mac</button>
+              </div>
+              <button class="reset-button" id="resetButton" type="button">重置</button>
+            </div>
+          </div>
+
+          <div class="keyboard-scroll">
+            <div class="keyboard" id="keyboard" aria-label="108 键满配列键盘"></div>
+          </div>
+
+          <div class="card-meta" aria-live="polite">
+            <span id="layoutName"><strong>Win 108</strong></span>
+            <span class="meta-separator">·</span>
+            <span id="testedLabel">已测 0/108</span>
+            <span class="meta-separator">·</span>
+            <span id="sessionTime">00:00</span>
+          </div>
+        </section>
+
+        <aside class="stats-card" aria-label="测试数据">
+          <div class="stat">
+            <span class="stat-label">TPS</span>
+            <strong class="stat-value" id="tpsValue">0<small>键/秒</small></strong>
+            <span class="stat-note">过去 1 秒</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">总计</span>
+            <strong class="stat-value" id="keysValue">0</strong>
+            <span class="stat-note">本次按下</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">同时</span>
+            <strong class="stat-value" id="downValue">0</strong>
+            <span class="stat-note" id="peakNote">峰值 0</span>
+          </div>
+          <div class="coverage">
+            <div class="coverage-head"><span>覆盖</span><strong id="coverageValue">0/108</strong></div>
+            <div class="coverage-track" aria-hidden="true"><div class="coverage-fill" id="coverageFill"></div></div>
+          </div>
+          <div class="recent">
+            <span class="recent-title">最近</span>
+            <div class="recent-list" id="recentList" aria-live="polite"><span class="recent-key">—</span></div>
+          </div>
+        </aside>
+      </section>
+
+      <footer class="bottom-bar">
+        <button class="focus-button" id="focusButton" type="button">进入专注</button>
+      </footer>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (() => {
+        const keyboard = document.getElementById('keyboard');
+        const tpsValue = document.getElementById('tpsValue');
+        const keysValue = document.getElementById('keysValue');
+        const downValue = document.getElementById('downValue');
+        const peakNote = document.getElementById('peakNote');
+        const testedLabel = document.getElementById('testedLabel');
+        const layoutName = document.getElementById('layoutName');
+        const coverageValue = document.getElementById('coverageValue');
+        const coverageFill = document.getElementById('coverageFill');
+        const recentList = document.getElementById('recentList');
+        const sessionTime = document.getElementById('sessionTime');
+        const focusButton = document.getElementById('focusButton');
+        const resetButton = document.getElementById('resetButton');
+        const status = document.getElementById('status');
+        const statusLabel = document.getElementById('statusLabel');
+        const toast = document.getElementById('toast');
+        const modeButtons = [...document.querySelectorAll('.mode-button')];
+
+        const mainRows = [
+          [
+            { code: 'Backquote', win: '`', mac: '`' }, { code: 'Digit1', win: '1', mac: '1' }, { code: 'Digit2', win: '2', mac: '2' }, { code: 'Digit3', win: '3', mac: '3' }, { code: 'Digit4', win: '4', mac: '4' }, { code: 'Digit5', win: '5', mac: '5' }, { code: 'Digit6', win: '6', mac: '6' }, { code: 'Digit7', win: '7', mac: '7' }, { code: 'Digit8', win: '8', mac: '8' }, { code: 'Digit9', win: '9', mac: '9' }, { code: 'Digit0', win: '0', mac: '0' }, { code: 'Minus', win: '-', mac: '-' }, { code: 'Equal', win: '=', mac: '=' }, { code: 'Backspace', win: 'Backspace', mac: 'Delete', cls: 'key--backspace small-label' }
+          ],
+          [
+            { code: 'Tab', win: 'Tab', mac: 'Tab', cls: 'key--tab small-label' }, { code: 'KeyQ', win: 'Q', mac: 'Q' }, { code: 'KeyW', win: 'W', mac: 'W' }, { code: 'KeyE', win: 'E', mac: 'E' }, { code: 'KeyR', win: 'R', mac: 'R' }, { code: 'KeyT', win: 'T', mac: 'T' }, { code: 'KeyY', win: 'Y', mac: 'Y' }, { code: 'KeyU', win: 'U', mac: 'U' }, { code: 'KeyI', win: 'I', mac: 'I' }, { code: 'KeyO', win: 'O', mac: 'O' }, { code: 'KeyP', win: 'P', mac: 'P' }, { code: 'BracketLeft', win: '[', mac: '[' }, { code: 'BracketRight', win: ']', mac: ']' }, { code: 'Backslash', win: '\\', mac: '\\', cls: 'key--backslash' }
+          ],
+          [
+            { code: 'CapsLock', win: 'Caps', mac: 'Caps', cls: 'key--caps small-label' }, { code: 'KeyA', win: 'A', mac: 'A' }, { code: 'KeyS', win: 'S', mac: 'S' }, { code: 'KeyD', win: 'D', mac: 'D' }, { code: 'KeyF', win: 'F', mac: 'F' }, { code: 'KeyG', win: 'G', mac: 'G' }, { code: 'KeyH', win: 'H', mac: 'H' }, { code: 'KeyJ', win: 'J', mac: 'J' }, { code: 'KeyK', win: 'K', mac: 'K' }, { code: 'KeyL', win: 'L', mac: 'L' }, { code: 'Semicolon', win: ';', mac: ';' }, { code: 'Quote', win: "'", mac: "'" }, { code: 'Enter', win: 'Enter', mac: 'Enter', cls: 'key--enter small-label' }
+          ],
+          [
+            { code: 'ShiftLeft', win: 'Shift', mac: 'Shift', cls: 'key--shift-left small-label' }, { code: 'KeyZ', win: 'Z', mac: 'Z' }, { code: 'KeyX', win: 'X', mac: 'X' }, { code: 'KeyC', win: 'C', mac: 'C' }, { code: 'KeyV', win: 'V', mac: 'V' }, { code: 'KeyB', win: 'B', mac: 'B' }, { code: 'KeyN', win: 'N', mac: 'N' }, { code: 'KeyM', win: 'M', mac: 'M' }, { code: 'Comma', win: ',', mac: ',' }, { code: 'Period', win: '.', mac: '.' }, { code: 'Slash', win: '/', mac: '/' }, { code: 'ShiftRight', win: 'Shift', mac: 'Shift', cls: 'key--shift-right small-label' }
+          ],
+          [
+            { code: 'ControlLeft', win: 'Ctrl', mac: 'Ctrl', cls: 'key--mod small-label' }, { code: 'MetaLeft', win: 'Win', mac: '⌘', cls: 'key--mod' }, { code: 'AltLeft', win: 'Alt', mac: '⌥', cls: 'key--mod' }, { code: 'Space', win: '', mac: '', cls: 'key--space' }, { code: 'AltRight', win: 'Alt', mac: '⌥', cls: 'key--mod' }, { code: 'MetaRight', win: 'Win', mac: '⌘', cls: 'key--mod' }, { code: 'ContextMenu', win: 'Menu', mac: 'Fn', cls: 'key--mod small-label' }, { code: 'ControlRight', win: 'Ctrl', mac: 'Ctrl', cls: 'key--mod small-label' }
+          ]
+        ];
+
+        const functionKeys = [
+          { code: 'Escape', win: 'Esc', mac: 'Esc', cls: 'small-label' },
+          { spacer: true },
+          ...['F1','F2','F3','F4'].map(code => ({ code, win: code, mac: code })),
+          { spacer: true },
+          ...['F5','F6','F7','F8'].map(code => ({ code, win: code, mac: code })),
+          { spacer: true },
+          ...['F9','F10','F11','F12'].map(code => ({ code, win: code, mac: code })),
+          { spacer: true },
+          { code: 'PrintScreen', win: 'PrtSc', mac: 'PrtSc', cls: 'small-label' },
+          { code: 'ScrollLock', win: 'ScrLk', mac: 'ScrLk', cls: 'small-label' },
+          { code: 'Pause', win: 'Pause', mac: 'Pause', cls: 'small-label' },
+          { spacer: true },
+          { code: 'AudioVolumeDown', win: 'Vol−', mac: 'Vol−', cls: 'small-label' },
+          { code: 'AudioVolumeUp', win: 'Vol＋', mac: 'Vol＋', cls: 'small-label' },
+          { code: 'AudioVolumeMute', win: 'Mute', mac: 'Mute', cls: 'small-label' },
+          { code: 'LaunchCalculator', win: 'Calc', mac: 'Calc', cls: 'small-label' }
+        ];
+
+        const navKeys = [
+          { code: 'Insert', win: 'Ins', mac: 'Ins', cls: 'small-label' },
+          { code: 'Home', win: 'Home', mac: 'Home', cls: 'small-label' },
+          { code: 'PageUp', win: 'PgUp', mac: 'PgUp', cls: 'small-label' },
+          { code: 'Delete', win: 'Del', mac: 'Del', cls: 'small-label' },
+          { code: 'End', win: 'End', mac: 'End', cls: 'small-label' },
+          { code: 'PageDown', win: 'PgDn', mac: 'PgDn', cls: 'small-label' },
+          { code: 'ArrowUp', win: '↑', mac: '↑', cls: 'small-label' },
+          { code: 'ArrowLeft', win: '←', mac: '←', cls: 'small-label' },
+          { code: 'ArrowDown', win: '↓', mac: '↓', cls: 'small-label' },
+          { code: 'ArrowRight', win: '→', mac: '→', cls: 'small-label' }
+        ];
+
+        const numpadKeys = [
+          { code: 'NumLock', win: 'Num', mac: 'Num', cls: 'small-label' },
+          { code: 'NumpadDivide', win: '/', mac: '/' },
+          { code: 'NumpadMultiply', win: '*', mac: '*' },
+          { code: 'NumpadSubtract', win: '−', mac: '−' },
+          { code: 'Numpad7', win: '7', mac: '7' },
+          { code: 'Numpad8', win: '8', mac: '8' },
+          { code: 'Numpad9', win: '9', mac: '9' },
+          { code: 'NumpadAdd', win: '+', mac: '+' },
+          { code: 'Numpad4', win: '4', mac: '4' },
+          { code: 'Numpad5', win: '5', mac: '5' },
+          { code: 'Numpad6', win: '6', mac: '6' },
+          { code: 'Numpad1', win: '1', mac: '1' },
+          { code: 'Numpad2', win: '2', mac: '2' },
+          { code: 'Numpad3', win: '3', mac: '3' },
+          { code: 'NumpadEnter', win: 'Enter', mac: 'Enter', cls: 'small-label' },
+          { code: 'Numpad0', win: '0', mac: '0' },
+          { code: 'NumpadDecimal', win: '.', mac: '.' }
+        ];
+
+        const keyNodes = new Map();
+        const pressed = new Set();
+        const tested = new Set();
+        const hits = [];
+        const recent = [];
+        const prettyNames = {
+          Escape: 'Esc', Backspace: '退格', Tab: 'Tab', CapsLock: '大写', Enter: '回车',
+          ShiftLeft: 'Shift', ShiftRight: 'Shift', ControlLeft: 'Ctrl', ControlRight: 'Ctrl',
+          AltLeft: 'Alt', AltRight: 'Alt', MetaLeft: 'Win', MetaRight: 'Win', Space: '空格', ContextMenu: '菜单',
+          PrintScreen: '截屏', ScrollLock: '滚锁', Pause: '暂停',
+          ArrowLeft: '←', ArrowDown: '↓', ArrowUp: '↑', ArrowRight: '→',
+          Insert: '插入', Delete: '删除', Home: '起始', End: '末尾', PageUp: '上页', PageDown: '下页',
+          NumLock: '数锁', NumpadEnter: '回车', NumpadDecimal: '.',
+          AudioVolumeDown: '音量−', AudioVolumeUp: '音量＋', AudioVolumeMute: '静音', LaunchCalculator: '计算器'
+        };
+        let mode = 'win';
+        let sessionStart = performance.now();
+        let totalKeys = 0;
+        let peakRollover = 0;
+        let focusActive = false;
+        let toastTimer;
+
+        function createKey(item) {
+          const key = document.createElement('button');
+          key.className = `key${item.cls ? ` ${item.cls}` : ''}`;
+          key.type = 'button';
+          key.tabIndex = -1;
+          key.dataset.code = item.code;
+          key.setAttribute('aria-label', item[mode] || 'Space');
+          key.textContent = item[mode];
+          keyNodes.set(item.code, key);
+          return key;
+        }
+
+        function appendRow(parent, items, className = 'deck-row') {
+          const row = document.createElement('div');
+          row.className = className;
+          items.forEach(item => {
+            if (item.spacer) {
+              const spacer = document.createElement('span');
+              spacer.className = 'key-spacer';
+              row.appendChild(spacer);
+            } else {
+              row.appendChild(createKey(item));
+            }
+          });
+          parent.appendChild(row);
+        }
+
+        function renderKeyboard() {
+          keyboard.replaceChildren();
+          keyNodes.clear();
+          appendRow(keyboard, functionKeys, 'function-row');
+
+          const decks = document.createElement('div');
+          decks.className = 'key-decks';
+          const mainDeck = document.createElement('div');
+          mainDeck.className = 'main-deck';
+          mainRows.forEach(row => appendRow(mainDeck, row));
+
+          const navDeck = document.createElement('div');
+          const navGrid = document.createElement('div');
+          navGrid.className = 'nav-grid';
+          navKeys.forEach(item => navGrid.appendChild(createKey(item)));
+          navDeck.appendChild(navGrid);
+
+          const numpadDeck = document.createElement('div');
+          numpadDeck.className = 'numpad-deck';
+          numpadKeys.forEach(item => numpadDeck.appendChild(createKey(item)));
+
+          decks.append(mainDeck, navDeck, numpadDeck);
+          keyboard.appendChild(decks);
+          applyTestedState();
+        }
+
+        function currentLabel(code) {
+          const node = keyNodes.get(code);
+          if (node) return node.textContent || '空格';
+          if (prettyNames[code]) return prettyNames[code];
+          if (code.startsWith('Key')) return code.slice(3);
+          if (code.startsWith('Digit')) return code.slice(5);
+          return code;
+        }
+
+        function paint(code, isPressed) {
+          const node = keyNodes.get(code);
+          if (node) node.classList.toggle('pressed', isPressed);
+        }
+
+        function flashVerified(code) {
+          const node = keyNodes.get(code);
+          if (!node) return;
+          node.classList.remove('verified');
+          void node.offsetWidth;
+          node.classList.add('verified');
+          setTimeout(() => node.classList.remove('verified'), 560);
+        }
+
+        function applyTestedState() {
+          keyNodes.forEach((node, code) => node.classList.toggle('tested', tested.has(code)));
+          const count = [...tested].filter(code => keyNodes.has(code)).length;
+          testedLabel.textContent = `已测 ${count}/108`;
+          coverageValue.textContent = `${count}/108`;
+          coverageFill.style.width = `${(count / 108) * 100}%`;
+        }
+
+        function renderRecent() {
+          recentList.replaceChildren(...recent.map(label => {
+            const item = document.createElement('span');
+            item.className = 'recent-key';
+            item.textContent = label;
+            return item;
+          }));
+          if (!recent.length) {
+            const empty = document.createElement('span');
+            empty.className = 'recent-key';
+            empty.textContent = '—';
+            recentList.appendChild(empty);
+          }
+        }
+
+        function addRecent(code) {
+          recent.unshift(currentLabel(code));
+          recent.splice(8);
+          renderRecent();
+        }
+
+        function formatTime(ms) {
+          const seconds = Math.floor(ms / 1000);
+          return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+        }
+
+        function updateMetrics() {
+          const now = performance.now();
+          while (hits.length && hits[0] < now - 1000) hits.shift();
+          tpsValue.firstChild.textContent = String(hits.length);
+          downValue.textContent = String(pressed.size);
+          peakNote.textContent = `峰值 ${peakRollover}`;
+          sessionTime.textContent = formatTime(now - sessionStart);
+          requestAnimationFrame(updateMetrics);
+        }
+
+        function registerHit(code) {
+          const now = performance.now();
+          hits.push(now);
+          totalKeys += 1;
+          tested.add(code);
+          keysValue.textContent = String(totalKeys);
+          addRecent(code);
+          applyTestedState();
+        }
+
+        function clearPressed() {
+          pressed.forEach(code => paint(code, false));
+          pressed.clear();
+          downValue.textContent = '0';
+        }
+
+        function resetSession() {
+          clearPressed();
+          hits.length = 0;
+          recent.length = 0;
+          tested.clear();
+          totalKeys = 0;
+          peakRollover = 0;
+          sessionStart = performance.now();
+          keysValue.textContent = '0';
+          renderRecent();
+          applyTestedState();
+        }
+
+        function showToast(message) {
+          toast.textContent = message;
+          toast.classList.add('is-visible');
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2400);
+        }
+
+        function setStatus(next) {
+          status.classList.toggle('is-active', next === 'active');
+          status.classList.toggle('is-paused', next === 'paused');
+          statusLabel.textContent = next === 'active' ? '专注中' : next === 'paused' ? '已暂停' : '已就绪';
+        }
+
+        function updateModeButtons() {
+          modeButtons.forEach(button => {
+            const selected = button.dataset.mode === mode;
+            button.classList.toggle('is-selected', selected);
+            button.setAttribute('aria-checked', String(selected));
+          });
+          const name = mode === 'win' ? 'Win 108' : 'Mac';
+          layoutName.innerHTML = `<strong>${name}</strong>`;
+          keyboard.setAttribute('aria-label', `${name} 键盘布局`);
+        }
+
+        function setMode(nextMode) {
+          if (nextMode === mode) return;
+          mode = nextMode;
+          resetSession();
+          renderKeyboard();
+          updateModeButtons();
+          showToast(mode === 'win' ? 'Win 108' : 'Mac');
+        }
+
+        const fallbackBlocked = new Set([
+          'Escape', 'Tab', 'MetaLeft', 'MetaRight', 'AltLeft', 'AltRight', 'ControlLeft', 'ControlRight',
+          'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
+          'PrintScreen', 'ScrollLock', 'Pause', 'ContextMenu'
+        ]);
+
+        function handleKeyDown(event) {
+          const code = event.code || event.key;
+          const shouldBlock = focusActive || fallbackBlocked.has(code) || event.metaKey || event.ctrlKey || event.altKey;
+          if (shouldBlock) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+          if (pressed.has(code)) return;
+          pressed.add(code);
+          paint(code, true);
+          if (pressed.size > peakRollover) peakRollover = pressed.size;
+          registerHit(code);
+        }
+
+        function handleKeyUp(event) {
+          const code = event.code || event.key;
+          if (focusActive || fallbackBlocked.has(code) || event.metaKey || event.ctrlKey || event.altKey) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+          pressed.delete(code);
+          paint(code, false);
+          flashVerified(code);
+          downValue.textContent = String(pressed.size);
+        }
+
+        async function setFocusMode(next) {
+          if (next) {
+            focusActive = true;
+            focusButton.classList.add('is-active');
+            focusButton.textContent = '退出专注';
+            setStatus('active');
+            let lockAvailable = false;
+            try {
+              if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+            } catch {}
+            try {
+              if (navigator.keyboard?.lock) {
+                await navigator.keyboard.lock();
+                lockAvailable = true;
+              }
+            } catch {}
+            showToast(lockAvailable ? '专注模式已开启' : '已开启 · 当前浏览器不支持键盘锁定');
+          } else {
+            focusActive = false;
+            clearPressed();
+            focusButton.classList.remove('is-active');
+            focusButton.textContent = '进入专注';
+            setStatus('ready');
+            try { navigator.keyboard?.unlock?.(); } catch {}
+            if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+          }
+        }
+
+        document.addEventListener('keydown', handleKeyDown, { capture: true });
+        document.addEventListener('keyup', handleKeyUp, { capture: true });
+        window.addEventListener('blur', () => {
+          clearPressed();
+          if (focusActive) setStatus('paused');
+        });
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) clearPressed();
+        });
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('selectstart', event => event.preventDefault());
+        document.addEventListener('dragstart', event => event.preventDefault());
+        document.addEventListener('fullscreenchange', () => {
+          if (!document.fullscreenElement && focusActive) {
+            focusActive = false;
+            clearPressed();
+            focusButton.classList.remove('is-active');
+            focusButton.textContent = '进入专注';
+            setStatus('paused');
+            try { navigator.keyboard?.unlock?.(); } catch {}
+          }
+        });
+
+        keyboard.addEventListener('pointerdown', event => {
+          const node = event.target.closest('.key');
+          if (!node) return;
+          const code = node.dataset.code;
+          if (pressed.has(code)) return;
+          pressed.add(code);
+          paint(code, true);
+          if (pressed.size > peakRollover) peakRollover = pressed.size;
+          registerHit(code);
+        });
+        keyboard.addEventListener('pointerup', event => {
+          const node = event.target.closest('.key');
+          if (!node) return;
+          const code = node.dataset.code;
+          pressed.delete(code);
+          paint(code, false);
+          flashVerified(code);
+          downValue.textContent = String(pressed.size);
+        });
+        window.addEventListener('pointerup', clearPressed);
+        modeButtons.forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
+        resetButton.addEventListener('click', () => { resetSession(); showToast('已重置'); });
+        focusButton.addEventListener('click', () => setFocusMode(!focusActive));
+
+        renderKeyboard();
+        updateModeButtons();
+        renderRecent();
+        updateMetrics();
+      })();
+    </script>
+  </body>
+</html>
